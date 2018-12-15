@@ -1,0 +1,14 @@
+---
+- hosts: nodes
+  remote_user: cloud_user
+  become: yes
+  become_method: sudo
+  vars:
+    temp_folder: /tmp
+  tasks:
+    # Install prerequisites
+    - include: tasks/prerequisites.yml
+
+    - include: tasks/mongodb.yml
+
+    - include: tasks/nodejs.yml
