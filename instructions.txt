@@ -1,0 +1,118 @@
+Instructions for configuring the ansible master
+Use ubuntu 14
+
+apt-get install software-properties-common
+apt-add-repository ppa:ansible/ansible
+apt-get update
+apt-get install ansible
+
+vi /etc/ansible/ansible.cfg
+uncomment
+inventory
+sudo_user
+
+Edit /etc/ansible/hosts
+add
+[local]
+localhost
+
+[nodes]
+virtling??.mylabserver.com
+
+Create ansible user
+allow ansible user to become root without using a password
+
+ssh-keygen for ansible user
+copy key to node
+
+main.yml
+---
+
+- hosts: nodes
+  remote_user: cloud_user
+  become: yes
+  become_method: sudo
+  vars:
+    temp_folder: /tmp
+
+
+   tasks:
+     # Install prerequesits
+     - include: tasks/prerequisits.yml
+
+     - include: tasks/mongodb.yml
+
+     - include: tasks/nodejs.yml
+
+
+prequisites.yml 
+---
+
+- name: install git
+  apt:
+    name: git
+    state: present
+    update_cache: yes
+
+ nodejs.yml 
+---
+- name: Node.js
+  get_url:
+    url: "http://deb.nodesource.com/setup_6.x"
+    dest: " {{ temp_folder }}/nodejs.sh"
+
+- name: Node.js | Set execute permission on script
+  file:
+    path: {{ temp_folder }}/nodejs.sh"
+    mode: "u+x"
+
+- name: Node.js | Execute install script
+  shell: "{{ temp_folder }}/nodejs.sh"
+
+- name: Node.js | Remove install script
+  file:
+    path: "{{ temp_folder }}/nodejs.sh"
+    state: absent
+
+- name: Node.js | Install Node.js
+  apt:
+    name: ['build-essential', 'nodejs']
+    state: present
+    update_cache: yes
+
+- name: Node.js | Install Node.js
+  apt: name=['bower', 'gulp'] state=present update_cache=yes
+
+#-- loop syntax depreciated. Use above syntax instead
+#- name: Node.js | Install bower and gulp globally
+#  npm: name={{ item }} state=present global=yes
+#  with_items: 
+#    - bower
+#    - gulp
+
+
+mongodb.yml 
+---
+- name: mongodb | import public key
+  apt_key:
+    keyserver: hkp://keyserver.ubuntu.com:80
+    id: EA312927
+
+- name: MongoDB | Add repo
+  apt_repository:
+    filename: '/etc/apt/sources.list.d/mongodb-org-3.2.list'
+    repo: 'deb http://repo.mongodb.org/apt/ubuntu trusty/mongodb-org/3.2 multiverse'
+    state: present   
+    update_cache: yes
+
+- name: MongoDB | Install MongoDB
+  apt:
+    name: mongodb-org
+    state: present
+    update_cache: yes
+
+- name: MongoDB | Ensure MOngoDB is running
+  service:
+    name: mongod
+    state: started
+
